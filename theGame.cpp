@@ -1,10 +1,3 @@
-/*
- * theGame.cpp
- *
- *  Created on: Feb 6, 2019
- *      Author: Haydar Karaoglu
- */
-
 #include <iostream>
 #include <vector>
 #include <algorithm>
@@ -395,7 +388,7 @@ public:
         if(checkBoundingBoxes(s1,s2)){
 #ifdef COLLISION_DEBUG
             std::cout << "Possible overlap "
-                     	 "Needs further investigation"
+                     	 "Needs further investigation "
                      	 "This is done by checkDenseSampling routine\n";
 #endif
             //Possible overlap -- Needs further investigation
@@ -489,7 +482,6 @@ private:
                    (s1->isInside(pnt5) && s2->isInside(pnt5))){
 #ifdef COLLISION_DEBUG
                     std::cout << "Found shared point\n" << std::endl;
-                    std::cout << pnt << std::endl;
 #endif
                     return true;
                 }
