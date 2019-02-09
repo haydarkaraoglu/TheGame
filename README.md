@@ -41,7 +41,7 @@ TEST SUCCEED -- Set Non-Overlapping Player
 
 	___IDEA___: To add other curvy shapes such as ellipse, it might be an option to add another Abstract Class to refrain from code repetition.
 
-* I made the centerPoint for Circles and vertices for Polygon2Ds public, so that visitors can access and modify them. 
+* I made the centerPoint and vertices public, so that visitors can access and modify them. 
 
 #### OPERATION:
 
@@ -49,7 +49,7 @@ TEST SUCCEED -- Set Non-Overlapping Player
 
 2- DragVisitor moves the Shape.
 
-3- RotateVisitor rotates Shape with respect to a reference point and for a given angle (positive in Clock-wise direction - in degrees).
+3- RotateVisitor rotates Shape with respect to a reference point and for a given angle (positive in Clock-wise direction - in degrees). Initial implementation was wrong as the roation of solid object must do as follows : Rotate area center of the shape then rotate vertices with respect to the center. This way the shape remains the same. Initial implementation was distorting the shape (WRONG!).
 
 #### CHECKOVERLAP:
 

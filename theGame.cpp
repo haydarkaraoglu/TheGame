@@ -13,6 +13,8 @@
 
 //Detailed DEBUG for collision
 //#define COLLISION_DEBUG
+//#define ROTATION_DEBUG -- For two scenarios, testing rotation of polygons
+
 
 //DEBUG -- Turns on Warning messages about failed operations
 //#define DEBUG
@@ -23,6 +25,7 @@
 #define PLAYER_DRAGGED_COLLISION
 #define PLAYER_ROTATED_OUT_OF_BOARD
 #define PLAYER_ROTATED_COLLISION
+
 
 using namespace std::placeholders;
 
@@ -110,7 +113,7 @@ class ShapeVisitor;
 //Interface -- Base class of all available shapes
 class Shape{
 public:
-    Shape() {};
+    Shape(const mPointType &cPointCoords) : centerPoint(cPointCoords) {};
     virtual ~Shape(){};
 
     virtual void accept(ShapeVisitor &visitor) = 0;
@@ -124,6 +127,8 @@ public:
 
     //Check if the shape contains a given point
     virtual bool isInside(const mPointType &pnt) const = 0;
+
+    mPointType centerPoint;
 };
 
 /*
@@ -132,8 +137,8 @@ public:
  */
 class Polygon2D : public Shape{
 public:
-    Polygon2D(const std::size_t &vertCnt) : Shape(),
-    vertices(vertCnt,{0,0}) {};
+    Polygon2D(const mPointType &cPointCoords, const std::size_t &vertCnt) :
+    Shape(cPointCoords), vertices(vertCnt,{0,0}) {};
 
     std::vector<mPointType> vertices;
 
@@ -162,7 +167,7 @@ public:
 class Circle : public Shape{
 public:
     Circle(const mPointType &cPointCoords,
-           const mType &inputRadius) : Shape(),
+           const mType &inputRadius) : Shape(cPointCoords),
            centerPoint(cPointCoords), radius(inputRadius) {}
 
     void accept(ShapeVisitor &visitor);
@@ -191,14 +196,16 @@ private:
 /*
  * Rectangle is a Polygon2D with 4 vertices
  * needs cPoint, width, height and rotation angle
+ * rotation angle is to be provided with respect
+ * to the center of the Rectangle
  */
 class Rectangle : public Polygon2D{
 public:
     Rectangle(const mPointType &cPointCoords,
               const mType &inputWidth, const mType &inputHeight,
               const mType &inputAngle) :
-              Polygon2D(4), width(inputWidth), height(inputHeight),
-              rotAngle(inputAngle) {
+              Polygon2D(cPointCoords, 4), width(inputWidth),
+			  height(inputHeight), rotAngle(inputAngle) {
 
         //Conversion from degrees to radian
         mType radRotAngle = rotAngle * M_PI/180.;
@@ -248,6 +255,9 @@ private:
  * Triangle is a Polygon2D with 3 vertices
  * needs all the three vertices
  *
+ * Sets the center point to -1,-1 in the initialization list
+ * and then calculated within the constructor.
+ *
  * ASSUMPTION: Input Triangle is a Triangle
  * I have not introduced any check mechanism for that
  */
@@ -255,10 +265,18 @@ class Triangle : public Polygon2D{
 public:
     Triangle(const mPointType &vert1, const mPointType &vert2,
              const mPointType &vert3) :
-    Polygon2D(3) {
+    Polygon2D({-1,-1},3) {
         vertices[0] = vert1;
         vertices[1] = vert2;
         vertices[2] = vert3;
+		mType cPointX = (vert2.x+vert3.x)/2.;
+		cPointX += (vert1.x-cPointX)/3.;
+
+		mType cPointY = (vert2.y+vert3.y)/2.;
+		cPointY += (vert1.y-cPointY)/3.;
+
+		//Set the centerPoint
+		centerPoint = {cPointX,cPointY};
     }
 
     /*
@@ -329,12 +347,28 @@ public:
 
     void execute(Circle &circle){
         //Update the center point of Circle
-        rotatePoint2D(circle.centerPoint);
+        rotatePoint2D(circle.centerPoint,refPoint);
     }
     void execute(Polygon2D &poly){
         //Update the vertices
+    	/*
+    	 * After rotating center point,
+    	 * rotate the vertices
+    	 */
+    	mPointType oldCenter = poly.centerPoint;
+
+    	/*
+    	 * Rotate in three steps
+    	 * 1- Update center point
+    	 * 1- Move vertices
+    	 * 2- Rotate vertices with respect to
+    	 * the new centerPoint
+    	 */
+    	rotatePoint2D(poly.centerPoint,refPoint);
         std::for_each(poly.vertices.begin(),poly.vertices.end(),
-                      [this](mPointType& p){rotatePoint2D(p);});
+                      [this,&poly,&oldCenter](mPointType& p)
+					  {p += (poly.centerPoint-oldCenter);
+					   rotatePoint2D(p,poly.centerPoint);});
     }
 private:
     /*
@@ -342,14 +376,15 @@ private:
      * a reference point.
      * newCoord = RefPoint + Rot_Matrix . (Pnt-RefPoint)
      */
-    void rotatePoint2D(mPointType &pnt){
-        mPointType newCarCoord = pnt - refPoint;
-
+    void rotatePoint2D(mPointType &pnt, const mPointType &refPnt){
         //Convert from degrees to radian
         mType radRotAngle = rotAngle * M_PI/180.;
+        mPointType newCarCoord = pnt - refPnt;
+
         Matrix2D rot2DMat({cos(radRotAngle),sin(radRotAngle),
                           -sin(radRotAngle),cos(radRotAngle)});
-        pnt = refPoint + rot2DMat.dot(newCarCoord);
+
+        pnt = refPnt + rot2DMat.dot(newCarCoord);
     }
 
     mPointType refPoint;
@@ -388,7 +423,7 @@ public:
         if(checkBoundingBoxes(s1,s2)){
 #ifdef COLLISION_DEBUG
             std::cout << "Possible overlap "
-                     	 "Needs further investigation "
+                     	 "Needs further investigation"
                      	 "This is done by checkDenseSampling routine\n";
 #endif
             //Possible overlap -- Needs further investigation
@@ -506,9 +541,9 @@ public:
         /*
          * Ensure that the shape pointers are deleted once the GameBoard
          * is out of scope.
-         * This may not be necessary if the shapes are deleted by the 
+         * This may not be necessary if the shapes are deleted by the
          * caller of GameBoard.
-         * In this case, I am assuming that the shapes are provided as 
+         * In this case, I am assuming that the shapes are provided as
          * pointers and the deletion is done by GameBoard.
          * See main() Test Simulation, to see how I am expecting it to
          * work.
@@ -659,6 +694,78 @@ int main(){
     if(!myGameBoard.insertShape(bTri)){
         delete bTri;
     }
+
+#ifdef ROTATION_DEBUG
+
+    {
+		Triangle *myPlayer = new Triangle({0,0},{0,20},{10,0});
+		RotateVisitor   rot({0,0},90);
+
+		std::cout << "----- Rotating Triangle by 90 deg\n";
+		std::cout << "Original Location: \n";
+		std::cout << "\tCenter Point: " << myPlayer->centerPoint << std::endl;
+		std::cout << "Vertices:\n";
+		unsigned int i = 1;
+		for(auto it : myPlayer->vertices){
+			std::cout << "\tVertex - " << i++ << ": " << it << std::endl;
+		}
+
+		if(!myGameBoard.setPlayer(myPlayer)){
+			delete myPlayer;
+		}
+
+		if(!myGameBoard.passCommands(rot)){
+			std::cerr << "Could not pass the command!!!\n";
+		}
+
+		std::cout << std::endl;
+
+		std::cout << "New Location: \n";
+		std::cout << "\tCenter Point: " << myPlayer->centerPoint << std::endl;
+		std::cout << "Vertices:\n";
+		i = 1;
+		for(auto it : myPlayer->vertices){
+			std::cout << "\tVertex - " << i++ << ": " << it << std::endl;
+		}
+
+		myGameBoard.removePlayer();
+    }
+
+    std::cout << std::endl;
+
+    {
+
+		Rectangle *myPlayer = new Rectangle({10,10},10,10,0);
+		RotateVisitor   rot({0,0},45);
+
+		std::cout << "----- Rotating Rectangle by 45 deg\n";
+		std::cout << "Original Location: \n";
+		std::cout << "\tCenter Point: " << myPlayer->centerPoint << std::endl;
+		std::cout << "Vertices:\n";
+		unsigned int i = 1;
+		for(auto it : myPlayer->vertices){
+			std::cout << "\tVertex - " << i++ << ": " << it << std::endl;
+		}
+
+		if(!myGameBoard.setPlayer(myPlayer)){
+			delete myPlayer;
+		}
+
+		if(!myGameBoard.passCommands(rot)){
+			std::cerr << "Could not pass the command!!!\n";
+		}
+
+		std::cout << std::endl;
+
+		std::cout << "New Location: \n";
+		std::cout << "\tCenter Point: " << myPlayer->centerPoint << std::endl;
+		std::cout << "Vertices:\n";
+		i = 1;
+		for(auto it : myPlayer->vertices){
+			std::cout << "\tVertex - " << i++ << ": " << it << std::endl;
+		}
+    }
+#endif
 
 #ifdef BOARD_DEBUG
     {
@@ -832,7 +939,7 @@ int main(){
         if(myGameBoard.passCommands(rot1)){
             std::cout << "TEST SUCCEED -- Rotated the Player\n";
         } else{
-            std::cout << "TEST SUCCEED -- Warning about Rotating "
+            std::cout << "TEST FAILED -- Warning about Rotating "
                          "the Player -- No Warning Expected\n";
         }
 
