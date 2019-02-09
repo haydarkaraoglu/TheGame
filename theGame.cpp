@@ -20,7 +20,7 @@
  * not the point of ROTATION_DEBUG. It is just to show
  * that the coordinates change as expected.
  */
-#define ROTATION_DEBUG
+//#define ROTATION_DEBUG
 
 
 //DEBUG -- Turns on Warning messages about failed operations
