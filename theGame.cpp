@@ -13,7 +13,14 @@
 
 //Detailed DEBUG for collision
 //#define COLLISION_DEBUG
-//#define ROTATION_DEBUG -- For two scenarios, testing rotation of polygons
+
+/*
+ * For two scenarios, testing rotation of polygons
+ * The polygons are moved out of the board but it is
+ * not the point of ROTATION_DEBUG. It is just to show
+ * that the coordinates change as expected.
+ */
+#define ROTATION_DEBUG
 
 
 //DEBUG -- Turns on Warning messages about failed operations
@@ -714,9 +721,7 @@ int main(){
 			delete myPlayer;
 		}
 
-		if(!myGameBoard.passCommands(rot)){
-			std::cerr << "Could not pass the command!!!\n";
-		}
+		myGameBoard.passCommands(rot);
 
 		std::cout << std::endl;
 
@@ -751,9 +756,7 @@ int main(){
 			delete myPlayer;
 		}
 
-		if(!myGameBoard.passCommands(rot)){
-			std::cerr << "Could not pass the command!!!\n";
-		}
+		myGameBoard.passCommands(rot);
 
 		std::cout << std::endl;
 
@@ -764,6 +767,8 @@ int main(){
 		for(auto it : myPlayer->vertices){
 			std::cout << "\tVertex - " << i++ << ": " << it << std::endl;
 		}
+
+		myGameBoard.removePlayer();
     }
 #endif
 
