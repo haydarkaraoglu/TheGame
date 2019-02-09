@@ -22,7 +22,6 @@
  */
 //#define ROTATION_DEBUG
 
-
 //DEBUG -- Turns on Warning messages about failed operations
 //#define DEBUG
 
@@ -335,6 +334,8 @@ public:
         circle.centerPoint += moveVector;
     }
     void execute(Polygon2D &poly){
+    	//Update the center point of Circle
+    	poly.centerPoint += moveVector;
         //Update the vertices
         std::for_each(poly.vertices.begin(),poly.vertices.end(),
                       [this](mPointType &p){p+=this->moveVector;});
