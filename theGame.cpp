@@ -174,7 +174,7 @@ class Circle : public Shape{
 public:
     Circle(const mPointType &cPointCoords,
            const mType &inputRadius) : Shape(cPointCoords),
-           centerPoint(cPointCoords), radius(inputRadius) {}
+           radius(inputRadius) {}
 
     void accept(ShapeVisitor &visitor);
 
@@ -194,7 +194,6 @@ public:
         mPointType relPnt = pnt - centerPoint;
         return relPnt.x*relPnt.x + relPnt.y*relPnt.y <= radius*radius;
     }
-    mPointType centerPoint;
 private:
     mType radius;
 };
